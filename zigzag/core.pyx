@@ -76,7 +76,8 @@ cpdef peak_valley_pivots_detailed(double [:] X,
                                   double up_thresh,
                                   double down_thresh,
                                   bint limit_to_finalized_segments,
-                                  bint use_eager_switching_for_non_final):
+                                  bint use_eager_switching_for_non_final,
+                                  int pivot_legs=1):
     """
     Find the peaks and valleys of a series.
 
@@ -119,28 +120,42 @@ cpdef peak_valley_pivots_detailed(double [:] X,
     up_thresh += 1
     down_thresh += 1
 
+    cdef int leg_count = 0
+
     for t in range(1, t_n):
         x = X[t]
         r = x / last_pivot_x
 
         if trend == -1:
             if r >= up_thresh:
-                pivots[last_pivot_t] = trend
-                trend = PEAK
-                last_pivot_x = x
-                last_pivot_t = t
+                # Überprüfung der Anzahl der Beine
+                if leg_count >= pivot_legs:
+                    pivots[last_pivot_t] = trend
+                    trend = PEAK
+                    last_pivot_x = x
+                    last_pivot_t = t
+                    leg_count = 0  # Zurücksetzen der Beinzählung
+                else:
+                    leg_count += 1  # Erhöhen der Beinzählung
             elif x < last_pivot_x:
                 last_pivot_x = x
                 last_pivot_t = t
+                leg_count = 0  # Zurücksetzen der Beinzählung
         else:
             if r <= down_thresh:
-                pivots[last_pivot_t] = trend
-                trend = VALLEY
-                last_pivot_x = x
-                last_pivot_t = t
+                # Überprüfung der Anzahl der Beine
+                if leg_count >= pivot_legs:
+                    pivots[last_pivot_t] = trend
+                    trend = VALLEY
+                    last_pivot_x = x
+                    last_pivot_t = t
+                    leg_count = 0  # Zurücksetzen der Beinzählung
+                else:
+                    leg_count += 1  # Erhöhen der Beinzählung
             elif x > last_pivot_x:
                 last_pivot_x = x
                 last_pivot_t = t
+                leg_count = 0  # Zurücksetzen der Beinzählung
 
 
     if limit_to_finalized_segments:
